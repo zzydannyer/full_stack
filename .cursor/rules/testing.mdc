@@ -1,0 +1,32 @@
+---
+description: Vitest 分层测试与先测后码流程
+alwaysApply: true
+---
+
+# 测试规范
+
+## 流程
+
+1. 新功能或改行为前，先列出测试清单（单元 / 接口 / e2e），等确认后再改代码
+2. 用 Vitest；禁止引入第二套测试框架
+3. 不写兜底测试；不断言实现细节，断言行为与契约
+
+## 分层
+
+| 层 | 命名 | 依赖 | 范围 |
+| --- | --- | --- | --- |
+| 单元 | `*.unit.test.ts` | mock，无真实 DB/Redis | schema、纯逻辑、service 分支 |
+| 接口 | `*.api.test.ts` | Nest + PostgreSQL + Redis | HTTP 状态码、响应体、Cookie、权限 |
+| e2e | `*.e2e.test.ts` | 完整 App + 真实依赖 | 关键用户路径 |
+
+## 脚本
+
+- `pnpm test` / `pnpm test:unit`：只跑单元
+- `pnpm test:api`：后端接口测试
+- `pnpm test:e2e`：后端 e2e
+- `pnpm test:all`：三层全跑
+
+## 放置
+
+- backend 共用启动：`apps/backend/test/create-test-app.ts`
+- 测试文件靠近被测源码，或放在同模块目录

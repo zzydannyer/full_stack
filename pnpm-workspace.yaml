@@ -1,0 +1,15 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+shamefullyHoist: true
+strictPeerDependencies: false
+minimumReleaseAge: 0
+confirmModulesPurge: false
+
+allowBuilds:
+  "@prisma/engines": true
+  prisma: true
+  esbuild: true
+  "@scarf/scarf": false
+  vue-demi: true

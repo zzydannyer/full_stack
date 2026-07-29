@@ -1,0 +1,35 @@
+{
+  "name": "full-stack",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm build:shared && pnpm -r --parallel run dev",
+    "dev:frontend": "pnpm --filter @full-stack/frontend dev",
+    "dev:backend": "pnpm --filter @full-stack/backend dev",
+    "build": "pnpm --filter @full-stack/shared build && pnpm --filter @full-stack/backend build && pnpm --filter @full-stack/frontend build",
+    "build:shared": "pnpm --filter @full-stack/shared build",
+    "test": "pnpm -r run test",
+    "test:unit": "pnpm -r --if-present run test:unit",
+    "test:api": "pnpm --filter @full-stack/backend test:api",
+    "test:e2e": "pnpm --filter @full-stack/backend test:e2e",
+    "test:all": "pnpm test:unit && pnpm test:api && pnpm test:e2e",
+    "lint": "oxlint .",
+    "lint:fix": "oxlint --fix .",
+    "format": "oxfmt --check",
+    "format:fix": "oxfmt .",
+    "db:generate": "pnpm --filter @full-stack/backend db:generate",
+    "db:migrate": "pnpm --filter @full-stack/backend db:migrate",
+    "db:deploy": "pnpm --filter @full-stack/backend db:deploy",
+    "db:push": "pnpm --filter @full-stack/backend db:push",
+    "db:seed": "pnpm --filter @full-stack/backend db:seed",
+    "db:studio": "pnpm --filter @full-stack/backend db:studio"
+  },
+  "devDependencies": {
+    "oxfmt": "^0.36.0",
+    "oxlint": "^1.56.0"
+  },
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=11"
+  },
+  "packageManager": "pnpm@11.13.1"
+}
