@@ -7,12 +7,17 @@ import { LoggerModule } from "nestjs-pino"
 import { ZodValidationPipe } from "nestjs-zod"
 import { AppController } from "./app.controller.js"
 import { AppService } from "./app.service.js"
+import { AuditModule } from "./audit/audit.module.js"
 import { AuthModule } from "./auth/auth.module.js"
 import { AllExceptionFilter } from "./common/filters/all-exception.filter.js"
 import { ResponseInterceptor } from "./common/interceptors/response.interceptor.js"
 import { env } from "./config/env.js"
+import { MailModule } from "./mail/mail.module.js"
+import { MetricsInterceptor } from "./metrics/metrics.interceptor.js"
+import { MetricsModule } from "./metrics/metrics.module.js"
 import { PrismaModule } from "./prisma/prisma.module.js"
 import { RedisModule } from "./redis/redis.module.js"
+import { UploadModule } from "./upload/upload.module.js"
 import { UserModule } from "./user/user.module.js"
 
 const pinoTransport =
@@ -47,8 +52,12 @@ const pinoTransport =
     }),
     PrismaModule,
     RedisModule,
+    MailModule,
+    AuditModule,
+    MetricsModule,
     AuthModule,
     UserModule,
+    UploadModule,
   ],
   controllers: [AppController],
   providers: [
@@ -60,6 +69,10 @@ const pinoTransport =
     {
       provide: APP_INTERCEPTOR,
       useClass: ResponseInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: MetricsInterceptor,
     },
     {
       provide: APP_FILTER,

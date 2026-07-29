@@ -42,6 +42,7 @@ const userStore = useUserStore()
 const dialogOpen = ref(false)
 const editing = ref<User>()
 const formError = ref("")
+const keyword = ref("")
 const form = reactive({
   username: "",
   email: "",
@@ -59,8 +60,12 @@ const totalPages = computed(() => {
 })
 
 onMounted(() => {
-  userStore.loadUsers({ page: 1, pageSize: 20 })
+  userStore.loadUsers({ page: 1, pageSize: 20, keyword: "" })
 })
+
+async function searchUsers() {
+  await userStore.loadUsers({ page: 1, pageSize: userStore.pageSize, keyword: keyword.value })
+}
 
 function openCreate() {
   editing.value = undefined
@@ -119,6 +124,7 @@ async function submitForm() {
 }
 
 async function removeUser(user: User) {
+  if (!window.confirm(t("users.deleteConfirm", { name: user.name }))) return
   const ok = await userStore.removeUser(user.id)
   if (!ok) return
   toast.success(t("users.deleted"))
@@ -126,7 +132,11 @@ async function removeUser(user: User) {
 
 async function goPage(next: number) {
   if (next < 1 || next > totalPages.value) return
-  await userStore.loadUsers({ page: next, pageSize: userStore.pageSize })
+  await userStore.loadUsers({
+    page: next,
+    pageSize: userStore.pageSize,
+    keyword: keyword.value,
+  })
 }
 </script>
 
@@ -139,6 +149,11 @@ async function goPage(next: number) {
       </div>
       <Button type="button" @click="openCreate">{{ t("users.create") }}</Button>
     </div>
+
+    <form class="flex items-center gap-2" @submit.prevent="searchUsers">
+      <Input v-model="keyword" type="search" :placeholder="t('users.searchPlaceholder')" />
+      <Button type="submit" variant="outline">{{ t("users.search") }}</Button>
+    </form>
 
     <div class="rounded-lg border">
       <Table>

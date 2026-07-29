@@ -10,7 +10,9 @@ export const useUserStore = defineStore("user", () => {
   const pageSize = ref(20)
   const loading = ref(false)
 
-  async function loadUsers(query: PageQuery = { page: page.value, pageSize: pageSize.value }) {
+  async function loadUsers(
+    query: PageQuery = { page: page.value, pageSize: pageSize.value, keyword: "" },
+  ) {
     loading.value = true
     await fetchUsers(query)
       .then(
@@ -37,7 +39,7 @@ export const useUserStore = defineStore("user", () => {
       loading.value = false
       return false
     }
-    await loadUsers({ page: page.value, pageSize: pageSize.value })
+    await loadUsers({ page: page.value, pageSize: pageSize.value, keyword: "" })
     return true
   }
 
@@ -51,7 +53,7 @@ export const useUserStore = defineStore("user", () => {
       loading.value = false
       return false
     }
-    await loadUsers({ page: page.value, pageSize: pageSize.value })
+    await loadUsers({ page: page.value, pageSize: pageSize.value, keyword: "" })
     return true
   }
 
@@ -65,7 +67,7 @@ export const useUserStore = defineStore("user", () => {
       loading.value = false
       return false
     }
-    await loadUsers({ page: page.value, pageSize: pageSize.value })
+    await loadUsers({ page: page.value, pageSize: pageSize.value, keyword: "" })
     return true
   }
 

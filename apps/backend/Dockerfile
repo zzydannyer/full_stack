@@ -24,4 +24,4 @@ COPY --from=build /app/packages/shared /app/packages/shared
 COPY --from=build /app/apps/backend /app/apps/backend
 WORKDIR /app/apps/backend
 EXPOSE 3000
-CMD ["sh", "-c", "pnpm exec prisma migrate deploy && node dist/main.js"]
+CMD ["sh", "-c", "pnpm exec prisma migrate deploy && pnpm exec prisma db seed && node dist/main.js"]

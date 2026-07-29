@@ -29,13 +29,13 @@ export class UserController {
   }
 
   @Post()
-  create(@Body() body: CreateUserBodyDto) {
-    return this.userService.create(body)
+  create(@Body() body: CreateUserBodyDto, @CurrentUser() user: DbUser) {
+    return this.userService.create(body, user)
   }
 
   @Patch(":id")
-  update(@Param("id") id: string, @Body() body: UpdateUserBodyDto) {
-    return this.userService.update(id, body)
+  update(@Param("id") id: string, @Body() body: UpdateUserBodyDto, @CurrentUser() user: DbUser) {
+    return this.userService.update(id, body, user)
   }
 
   @Delete(":id")

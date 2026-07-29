@@ -13,6 +13,7 @@ import type {
 } from "@full-stack/shared"
 import { okResponse } from "@full-stack/shared"
 import { hash } from "bcryptjs"
+import { AuditService } from "../audit/audit.service.js"
 import { AuthSessionService } from "../auth/auth-session.service.js"
 import type { Role, User as DbUser } from "../generated/prisma/client.js"
 import { PrismaService } from "../prisma/prisma.service.js"
@@ -22,11 +23,23 @@ export class UserService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly authSession: AuthSessionService,
+    private readonly auditService: AuditService,
   ) {}
 
   async list(query: PageQuery) {
-    const total = await this.prisma.user.count()
+    const where =
+      query.keyword.length === 0
+        ? {}
+        : {
+            OR: [
+              { username: { contains: query.keyword, mode: "insensitive" as const } },
+              { email: { contains: query.keyword, mode: "insensitive" as const } },
+              { name: { contains: query.keyword, mode: "insensitive" as const } },
+            ],
+          }
+    const total = await this.prisma.user.count({ where })
     const rows = await this.prisma.user.findMany({
+      where,
       orderBy: { createdAt: "desc" },
       skip: (query.page - 1) * query.pageSize,
       take: query.pageSize,
@@ -48,7 +61,7 @@ export class UserService {
     return okResponse(this.toUser(row))
   }
 
-  async create(input: CreateUserBody) {
+  async create(input: CreateUserBody, current: DbUser) {
     await this.assertUnique(input.username, input.email)
     const passwordHash = await hash(input.password, 10)
     const row = await this.prisma.user.create({
@@ -60,10 +73,11 @@ export class UserService {
         role: input.role,
       },
     })
+    await this.auditService.write("user.create", current.id, row.id)
     return okResponse(this.toUser(row))
   }
 
-  async update(id: string, input: UpdateUserBody) {
+  async update(id: string, input: UpdateUserBody, current: DbUser) {
     const row = await this.prisma.user.findUnique({ where: { id } })
     if (!row) {
       throw new NotFoundException("user not found")
@@ -82,6 +96,7 @@ export class UserService {
     if (input.disabled) {
       await this.authSession.revokeUserSessions(id)
     }
+    await this.auditService.write("user.update", current.id, id)
     return okResponse(this.toUser(updated))
   }
 
@@ -95,6 +110,7 @@ export class UserService {
     }
     await this.authSession.revokeUserSessions(id)
     await this.prisma.user.delete({ where: { id } })
+    await this.auditService.write("user.delete", current.id, id)
     return okResponse({})
   }
 

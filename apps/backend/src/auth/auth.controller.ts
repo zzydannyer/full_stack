@@ -10,6 +10,7 @@ import {
   UseGuards,
 } from "@nestjs/common"
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger"
+import { Throttle } from "@nestjs/throttler"
 import { okResponse } from "@full-stack/shared"
 import type { Request, Response } from "express"
 import { isString } from "lodash-es"
@@ -30,16 +31,15 @@ import { clearRefreshCookie, refreshCookieName, setRefreshCookie } from "./refre
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post("register")
-  async register(
-    @Body() body: RegisterBodyDto,
-    @Res({ passthrough: true }) response: Response,
-  ) {
+  async register(@Body() body: RegisterBodyDto, @Res({ passthrough: true }) response: Response) {
     const result = await this.authService.register(body)
     setRefreshCookie(response, result.refreshToken)
     return result.body
   }
 
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post("login")
   async login(@Body() body: LoginBodyDto, @Res({ passthrough: true }) response: Response) {
     const result = await this.authService.login(body)
@@ -68,11 +68,13 @@ export class AuthController {
     return okResponse({})
   }
 
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post("forgot-password")
   forgotPassword(@Body() body: ForgotPasswordBodyDto) {
     return this.authService.forgotPassword(body)
   }
 
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post("reset-password")
   resetPassword(@Body() body: ResetPasswordBodyDto) {
     return this.authService.resetPassword(body)

@@ -8,7 +8,8 @@
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run --config vitest.unit.config.ts",
-    "test:unit": "vitest run --config vitest.unit.config.ts"
+    "test:unit": "vitest run --config vitest.unit.config.ts",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@full-stack/shared": "workspace:*",
@@ -31,9 +32,11 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.0",
     "@tailwindcss/vite": "^4.3.3",
     "@types/lodash-es": "^4.17.12",
     "@vitejs/plugin-vue": "^6.0.8",
+    "@vitest/coverage-v8": "^4.1.10",
     "@vue/test-utils": "^2.4.11",
     "jsdom": "^29.1.1",
     "tailwindcss": "^4.3.3",

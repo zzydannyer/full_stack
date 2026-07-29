@@ -12,10 +12,12 @@ describe("envSchema", () => {
       JWT_EXPIRES_SECONDS: "900",
       JWT_REFRESH_EXPIRES_SECONDS: "604800",
       REDIS_URL: "redis://127.0.0.1:6379",
+      COOKIE_SECURE: "false",
     })
     expect(result.PORT).toBe("3000")
     expect(result.JWT_EXPIRES_SECONDS).toBe(900)
     expect(result.JWT_REFRESH_EXPIRES_SECONDS).toBe(604800)
     expect(result.NODE_ENV).toBe("development")
+    expect(result.COOKIE_SECURE).toBe(false)
   })
 })

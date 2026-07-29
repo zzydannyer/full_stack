@@ -33,11 +33,18 @@ services:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/full_stack
       PORT: "3000"
       FRONTEND_ORIGIN: http://localhost:8080
-      JWT_SECRET: docker-jwt-secret-change-me
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production-please}
       JWT_EXPIRES_IN: 15m
       JWT_EXPIRES_SECONDS: "900"
       JWT_REFRESH_EXPIRES_SECONDS: "604800"
       REDIS_URL: redis://redis:6379
+      COOKIE_SECURE: "false"
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      UPLOAD_DIR: uploads
     ports:
       - "3000:3000"
     depends_on:

@@ -1,19 +1,19 @@
 import { beforeEach, describe, expect, it } from "vitest"
-import { writeAccessToken } from "./http"
+import { readAccessToken, writeAccessToken } from "./http"
 
-describe("writeAccessToken", () => {
+describe("access token memory", () => {
   beforeEach(() => {
-    sessionStorage.clear()
+    writeAccessToken("")
   })
 
-  it("stores access token in sessionStorage", () => {
+  it("stores access token in memory", () => {
     writeAccessToken("token-1")
-    expect(sessionStorage.getItem("accessToken")).toBe("token-1")
+    expect(readAccessToken()).toBe("token-1")
   })
 
   it("clears access token when empty", () => {
     writeAccessToken("token-1")
     writeAccessToken("")
-    expect(sessionStorage.getItem("accessToken")).toBeNull()
+    expect(readAccessToken()).toBe("")
   })
 })

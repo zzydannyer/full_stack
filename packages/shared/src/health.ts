@@ -1,0 +1,9 @@
+import { z } from "zod"
+
+export const healthSchema = z.object({
+  status: z.enum(["ok", "degraded"]),
+  database: z.enum(["up", "down"]),
+  redis: z.enum(["up", "down"]),
+})
+
+export type Health = z.infer<typeof healthSchema>

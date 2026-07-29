@@ -4,31 +4,47 @@ import { hash } from "bcryptjs"
 import { isString } from "lodash-es"
 import request from "supertest"
 import { closeTestApp, createTestApp } from "../../test/create-test-app.js"
+import { AuthSessionService } from "./auth-session.service.js"
 import { PrismaService } from "../prisma/prisma.service.js"
 
 describe("auth api", () => {
   let app: INestApplication
   let prisma: PrismaService
+  let authSession: AuthSessionService
   const disabledUsername = `disabled_${Date.now()}`
+  const resetUsername = `reset_${Date.now()}`
 
   beforeAll(async () => {
     app = await createTestApp()
     prisma = app.get(PrismaService)
+    authSession = app.get(AuthSessionService)
+    const passwordHash = await hash("888888", 10)
     await prisma.user.create({
       data: {
         username: disabledUsername,
         email: `${disabledUsername}@example.com`,
         name: "disabled",
-        passwordHash: await hash("888888", 10),
+        passwordHash,
         role: "user",
         disabled: true,
+      },
+    })
+    await prisma.user.create({
+      data: {
+        username: resetUsername,
+        email: `${resetUsername}@example.com`,
+        name: "reset",
+        passwordHash,
+        role: "user",
       },
     })
   })
 
   afterAll(async () => {
     await prisma.user.deleteMany({
-      where: { username: disabledUsername },
+      where: {
+        username: { in: [disabledUsername, resetUsername] },
+      },
     })
     await closeTestApp(app)
   })
@@ -85,6 +101,23 @@ describe("auth api", () => {
       newPassword: "123456",
     })
     expect(res.status).toBe(401)
+  })
+
+  it("resets password with valid token then login", async () => {
+    const user = await prisma.user.findUnique({ where: { username: resetUsername } })
+    expect(user).toBeTruthy()
+    if (!user) return
+    const token = await authSession.createPasswordReset(user.id)
+    const reset = await request(app.getHttpServer()).post("/api/auth/reset-password").send({
+      token,
+      newPassword: "654321",
+    })
+    expect(reset.status).toBe(201)
+    const login = await request(app.getHttpServer()).post("/api/auth/login").send({
+      account: resetUsername,
+      password: "654321",
+    })
+    expect(login.status).toBe(201)
   })
 
   it("rejects users list without admin token", async () => {

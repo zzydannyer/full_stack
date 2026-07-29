@@ -6,6 +6,7 @@ export const pageLimit = {
   pageSizeMax: 100,
   pageDefault: 1,
   pageSizeDefault: 20,
+  keywordMax: 100,
 } as const
 
 export const pageQuerySchema = z.object({
@@ -16,6 +17,7 @@ export const pageQuerySchema = z.object({
     .min(pageLimit.pageSizeMin)
     .max(pageLimit.pageSizeMax)
     .default(pageLimit.pageSizeDefault),
+  keyword: z.string().max(pageLimit.keywordMax).default(""),
 })
 
 export type PageQuery = z.infer<typeof pageQuerySchema>

@@ -9,7 +9,6 @@ import type {
   UpdateProfileBody,
   User,
 } from "@full-stack/shared"
-import { isString } from "lodash-es"
 import {
   changePasswordApi,
   fetchMeApi,
@@ -21,17 +20,11 @@ import {
   resetPasswordApi,
   updateProfileApi,
 } from "@/api/auth"
-import { writeAccessToken } from "@/api/http"
-
-function readStoredToken() {
-  const stored = sessionStorage.getItem("accessToken")
-  if (isString(stored)) return stored
-  return ""
-}
+import { readAccessToken, writeAccessToken } from "@/api/http"
 
 export const useAuthStore = defineStore("auth", () => {
   const user = ref<User>()
-  const accessToken = ref(readStoredToken())
+  const accessToken = ref(readAccessToken())
   const loading = ref(false)
 
   function setToken(token: string) {

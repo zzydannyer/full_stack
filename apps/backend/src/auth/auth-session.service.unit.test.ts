@@ -1,5 +1,6 @@
 import "dotenv/config"
 import { beforeEach, describe, expect, it } from "vitest"
+import { UnauthorizedException } from "@nestjs/common"
 import { isString, isUndefined } from "lodash-es"
 import type Redis from "ioredis"
 import { AuthSessionService } from "./auth-session.service.js"
@@ -68,6 +69,12 @@ function createRedisMock() {
       values.delete(key)
       return 1
     },
+    async srem(key: string, member: string) {
+      const current = sets.get(key)
+      if (!current) return 0
+      current.delete(member)
+      return 1
+    },
     async smembers(key: string) {
       return [...(sets.get(key) ?? new Set<string>())]
     },
@@ -98,8 +105,7 @@ describe("AuthSessionService", () => {
     expect(isString(rotated.refreshToken)).toBe(true)
     expect(rotated.refreshToken).not.toBe(token)
 
-    const reused = await service.rotateRefresh(token)
-    expect(isUndefined(reused)).toBe(true)
+    await expect(service.rotateRefresh(token)).rejects.toBeInstanceOf(UnauthorizedException)
   })
 
   it("revokes user sessions", async () => {

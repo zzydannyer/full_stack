@@ -1,9 +1,4 @@
-import {
-  ConflictException,
-  Injectable,
-  Logger,
-  UnauthorizedException,
-} from "@nestjs/common"
+import { ConflictException, Injectable, UnauthorizedException } from "@nestjs/common"
 import { JwtService } from "@nestjs/jwt"
 import type {
   AuthToken,
@@ -17,19 +12,21 @@ import type {
 } from "@full-stack/shared"
 import { okResponse } from "@full-stack/shared"
 import { compare, hash } from "bcryptjs"
+import { AuditService } from "../audit/audit.service.js"
 import { env } from "../config/env.js"
 import type { Role, User as DbUser } from "../generated/prisma/client.js"
+import { MailService } from "../mail/mail.service.js"
 import { PrismaService } from "../prisma/prisma.service.js"
 import { AuthSessionService } from "./auth-session.service.js"
 
 @Injectable()
 export class AuthService {
-  private readonly logger = new Logger(AuthService.name)
-
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly authSession: AuthSessionService,
+    private readonly mailService: MailService,
+    private readonly auditService: AuditService,
   ) {}
 
   async register(input: RegisterBody) {
@@ -52,6 +49,7 @@ export class AuthService {
       },
     })
 
+    await this.auditService.write("auth.register", row.id)
     const refreshToken = await this.authSession.createRefresh(row.id)
     return {
       body: okResponse({
@@ -69,17 +67,21 @@ export class AuthService {
       },
     })
     if (!row) {
+      await this.auditService.write("auth.login_failed", "", input.account)
       throw new UnauthorizedException("invalid account or password")
     }
     if (row.disabled) {
+      await this.auditService.write("auth.login_disabled", row.id)
       throw new UnauthorizedException("user disabled")
     }
 
     const matched = await compare(input.password, row.passwordHash)
     if (!matched) {
+      await this.auditService.write("auth.login_failed", row.id)
       throw new UnauthorizedException("invalid account or password")
     }
 
+    await this.auditService.write("auth.login", row.id)
     const refreshToken = await this.authSession.createRefresh(row.id)
     return {
       body: okResponse({
@@ -135,6 +137,7 @@ export class AuthService {
         email: input.email,
       },
     })
+    await this.auditService.write("auth.profile_update", row.id)
     return okResponse(this.toUser(updated))
   }
 
@@ -150,6 +153,7 @@ export class AuthService {
       data: { passwordHash },
     })
     await this.authSession.revokeUserSessions(row.id)
+    await this.auditService.write("auth.password_change", row.id)
     return okResponse({})
   }
 
@@ -160,7 +164,8 @@ export class AuthService {
     if (row && !row.disabled) {
       const token = await this.authSession.createPasswordReset(row.id)
       const link = `${env.FRONTEND_ORIGIN}/reset-password?token=${token}`
-      this.logger.log(`password reset link: ${link}`)
+      await this.mailService.sendPasswordReset(row.email, link)
+      await this.auditService.write("auth.forgot_password", row.id)
     }
     return okResponse({})
   }
@@ -176,6 +181,7 @@ export class AuthService {
       data: { passwordHash },
     })
     await this.authSession.revokeUserSessions(userId)
+    await this.auditService.write("auth.reset_password", userId)
     return okResponse({})
   }
 

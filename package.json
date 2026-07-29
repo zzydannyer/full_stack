@@ -11,6 +11,7 @@
     "test:unit": "pnpm -r --if-present run test:unit",
     "test:api": "pnpm --filter @full-stack/backend test:api",
     "test:e2e": "pnpm --filter @full-stack/backend test:e2e",
+    "test:e2e:web": "pnpm --filter @full-stack/frontend test:e2e",
     "test:all": "pnpm test:unit && pnpm test:api && pnpm test:e2e",
     "lint": "oxlint .",
     "lint:fix": "oxlint --fix .",
@@ -21,9 +22,13 @@
     "db:deploy": "pnpm --filter @full-stack/backend db:deploy",
     "db:push": "pnpm --filter @full-stack/backend db:push",
     "db:seed": "pnpm --filter @full-stack/backend db:seed",
-    "db:studio": "pnpm --filter @full-stack/backend db:studio"
+    "db:studio": "pnpm --filter @full-stack/backend db:studio",
+    "prepare": "husky"
   },
   "devDependencies": {
+    "@commitlint/cli": "^21.2.1",
+    "@commitlint/config-conventional": "^21.2.0",
+    "husky": "^9.1.7",
     "oxfmt": "^0.36.0",
     "oxlint": "^1.56.0"
   },
@@ -31,5 +36,5 @@
     "node": ">=20",
     "pnpm": ">=11"
   },
-  "packageManager": "pnpm@11.13.1"
+  "packageManager": "pnpm@11.17.0"
 }

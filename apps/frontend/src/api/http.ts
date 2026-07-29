@@ -13,6 +13,7 @@ export const http = axios.create({
 })
 
 const retriedConfigs = new WeakSet<InternalAxiosRequestConfig>()
+let accessTokenMemory = ""
 let refreshing = false
 let refreshRequest = Promise.resolve("")
 
@@ -28,18 +29,12 @@ function readErrorMessage(error: AxiosError) {
   return i18n.global.t("http.requestFailed")
 }
 
-function readAccessToken() {
-  const stored = sessionStorage.getItem("accessToken")
-  if (isString(stored)) return stored
-  return ""
+export function writeAccessToken(token: string) {
+  accessTokenMemory = token
 }
 
-export function writeAccessToken(token: string) {
-  if (token.length === 0) {
-    sessionStorage.removeItem("accessToken")
-    return
-  }
-  sessionStorage.setItem("accessToken", token)
+export function readAccessToken() {
+  return accessTokenMemory
 }
 
 function clearSessionAndRedirect(error: AxiosError) {
