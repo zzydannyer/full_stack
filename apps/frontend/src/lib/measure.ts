@@ -1,12 +1,7 @@
 import axios from "axios"
 import { isUndefined } from "lodash-es"
 
-export type PerformanceEndpoint =
-  | "ping"
-  | "json"
-  | "compute"
-  | "databaseRead"
-  | "databaseWrite"
+export type PerformanceEndpoint = "ping" | "json" | "compute" | "databaseRead" | "databaseWrite"
 export type PerformancePreset = "light" | "heavy" | "extreme"
 export type PerformanceBackend = "nest" | "axum" | "elysia" | "spring"
 export type PerformanceDatabase = "postgresql" | "mysql"
@@ -143,9 +138,7 @@ export function createPerformanceTargets(
     return backends.map((target) => ({ ...target, database: "none" }))
   }
   const databases: PerformanceDatabase[] = ["postgresql", "mysql"]
-  return backends.flatMap((target) =>
-    databases.map((database) => ({ ...target, database })),
-  )
+  return backends.flatMap((target) => databases.map((database) => ({ ...target, database })))
 }
 
 function percentile(sortedDurations: number[], percentage: number) {
@@ -277,12 +270,10 @@ function createRequest(
       )
     }
     if (options.endpoint === "compute") {
-      return client
-        .get("/benchmark/compute", { params: { iterations: options.iterations } })
-        .then(
-          () => true,
-          () => false,
-        )
+      return client.get("/benchmark/compute", { params: { iterations: options.iterations } }).then(
+        () => true,
+        () => false,
+      )
     }
     if (options.endpoint === "databaseRead") {
       return client

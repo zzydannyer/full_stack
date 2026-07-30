@@ -36,11 +36,7 @@ export async function readBenchmark(databaseName: DatabaseName, limit: number) {
   }
 }
 
-export async function writeBenchmark(
-  databaseName: DatabaseName,
-  count: number,
-  runId: string,
-) {
+export async function writeBenchmark(databaseName: DatabaseName, count: number, runId: string) {
   const database = selectDatabase(databaseName)
   await database.begin(async (transaction) => {
     for (let index = 0; index < count; index += 1) {

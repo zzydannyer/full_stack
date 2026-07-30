@@ -58,15 +58,11 @@ describe("runtime benchmark contract", () => {
   })
 
   it.each(
-    runtimeNames.flatMap((runtime) =>
-      databaseNames.map((database) => ({ runtime, database })),
-    ),
+    runtimeNames.flatMap((runtime) => databaseNames.map((database) => ({ runtime, database }))),
   )("$runtime implements $database read and committed write", async ({ runtime, database }) => {
     const client = runtimeRequest(runtime)
     const runId = `${runtime}-${database}-${Date.now()}`
-    const read = await client.get(
-      `/api/benchmark/database/read?database=${database}&limit=1`,
-    )
+    const read = await client.get(`/api/benchmark/database/read?database=${database}&limit=1`)
     const write = await client.post(
       `/api/benchmark/database/write?database=${database}&count=2&runId=${runId}`,
     )

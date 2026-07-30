@@ -81,7 +81,8 @@ export default {
     successful: "成功",
     failed: "失败",
     comparisonChart: "综合对比",
-    comparisonHint: "按指标分组，同组内对比各后端；柱高为同类归一化（延迟越低柱越高），悬停查看原值",
+    comparisonHint:
+      "按指标分组，同组内对比各后端；柱高为同类归一化（延迟越低柱越高），悬停查看原值",
     normalizedAxis: "相对最优 %",
     successRate: "成功率",
     target: {

@@ -73,10 +73,7 @@ export class BenchmarkRepository {
     return { database, runId, count }
   }
 
-  async cleanup(
-    database: PerformanceDatabaseDTO,
-    runId: string,
-  ): Promise<PerformanceCleanupVO> {
+  async cleanup(database: PerformanceDatabaseDTO, runId: string): Promise<PerformanceCleanupVO> {
     if (database === "postgresql") {
       const result = await this.postgresqlPool.query<{ id: number }>(
         "DELETE FROM benchmark_record WHERE run_id = $1 RETURNING id",
@@ -103,13 +100,15 @@ export class BenchmarkRepository {
     return {
       database,
       count: rows.length,
-      items: rows.map((row): PerformanceRecordVO => ({
-        id: row.id,
-        runId: row.run_id,
-        payload: row.payload,
-        score: row.score,
-        createdAt: row.created_at.toISOString(),
-      })),
+      items: rows.map(
+        (row): PerformanceRecordVO => ({
+          id: row.id,
+          runId: row.run_id,
+          payload: row.payload,
+          score: row.score,
+          createdAt: row.created_at.toISOString(),
+        }),
+      ),
     }
   }
 

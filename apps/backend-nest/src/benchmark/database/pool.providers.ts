@@ -16,7 +16,6 @@ export const poolProviders: Provider[] = [
   {
     provide: MYSQL_BENCHMARK_POOL,
     inject: [ConfigService],
-    useFactory: (config: ConfigService) =>
-      createMysqlPool(config.getOrThrow<string>("MYSQL_URL")),
+    useFactory: (config: ConfigService) => createMysqlPool(config.getOrThrow<string>("MYSQL_URL")),
   },
 ]

@@ -34,7 +34,7 @@ import {
 
 use([CanvasRenderer, BarChart, GridComponent, TooltipComponent, LegendComponent])
 
-const { t, locale } = useI18n()
+const { t } = useI18n()
 const endpoint = ref<PerformanceEndpoint>("ping")
 const preset = ref<PerformancePreset>("extreme")
 const settings = ref({ ...performancePresets.extreme })
@@ -57,7 +57,6 @@ const backendColors: Record<PerformanceBackend, string> = {
 }
 
 const chartOption = computed(() => {
-  locale.value
   const categories = comparisonMetrics.map((metric) => t(`performance.${metric.key}`))
   return {
     tooltip: {
@@ -103,9 +102,7 @@ const chartOption = computed(() => {
         const floor = Math.min(...values, peak)
         const value = result[metric.key]
         return {
-          value: metric.invert
-            ? (floor / Math.max(value, floor)) * 100
-            : (value / peak) * 100,
+          value: metric.invert ? (floor / Math.max(value, floor)) * 100 : (value / peak) * 100,
           raw: value,
           metricKey: metric.key,
         }
@@ -244,7 +241,10 @@ function cancelTests() {
         <CardDescription>{{ t("performance.measureHint") }}</CardDescription>
       </CardHeader>
       <CardContent>
-        <form class="grid gap-4 md:grid-cols-2 xl:grid-cols-4 xl:items-end" @submit.prevent="runTests">
+        <form
+          class="grid gap-4 md:grid-cols-2 xl:grid-cols-4 xl:items-end"
+          @submit.prevent="runTests"
+        >
           <div class="grid gap-2">
             <Label for="performance-endpoint">{{ t("performance.endpoint") }}</Label>
             <Select v-model="endpoint">
