@@ -243,6 +243,7 @@ function cancelTests() {
       <CardContent>
         <form
           class="grid gap-4 md:grid-cols-2 xl:grid-cols-4 xl:items-end"
+          novalidate
           @submit.prevent="runTests"
         >
           <div class="grid gap-2">
