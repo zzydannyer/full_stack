@@ -36,7 +36,7 @@
     "cross-env": "^10.1.0",
     "dotenv-cli": "^11.0.0",
     "husky": "^9.1.7",
-    "oxfmt": "^0.36.0",
+    "oxfmt": "^0.61.0",
     "oxlint": "^1.56.0"
   },
   "engines": {
