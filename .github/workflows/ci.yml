@@ -67,7 +67,7 @@ jobs:
       VITE_BACKEND_ELYSIA_URL: /backend-elysia
       VITE_BACKEND_SPRING_URL: /backend-spring
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
