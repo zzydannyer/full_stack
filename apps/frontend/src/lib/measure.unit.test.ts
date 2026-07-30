@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from "vitest"
 import {
   calculatePerformance,
+  createPerformanceControl,
   createPerformanceTargets,
+  createRunId,
   measureRequests,
   measureWriteRequests,
   performancePresets,
@@ -129,5 +131,62 @@ describe("performance measurement", () => {
     expect(request).toHaveBeenCalledTimes(2)
     expect(result.avg).toBe(20)
     expect(result.throughput).toBe(25)
+  })
+
+  it("stops issuing samples after cancel", async () => {
+    const control = createPerformanceControl()
+    let calls = 0
+    const request = vi.fn<() => Promise<boolean>>().mockImplementation(() => {
+      calls += 1
+      if (calls === 2) control.cancel()
+      return Promise.resolve(true)
+    })
+
+    const result = await measureRequests(
+      {
+        ...performancePresets.light,
+        endpoint: "ping",
+        samples: 8,
+        concurrency: 1,
+      },
+      request,
+      control,
+    )
+
+    expect(control.cancelled).toBe(true)
+    expect(request.mock.calls.length).toBeLessThan(9)
+    expect(result.successful + result.failed).toBeLessThan(8)
+  })
+
+  it("creates run ids without randomUUID", () => {
+    expect(createRunId()).toMatch(/^[0-9a-f]{32}$/)
+    expect(createRunId()).not.toBe(createRunId())
+  })
+
+  it("resumes samples after pause", async () => {
+    const control = createPerformanceControl()
+    let calls = 0
+    const request = vi.fn<() => Promise<boolean>>().mockImplementation(() => {
+      calls += 1
+      if (calls === 2) {
+        control.pause()
+        setTimeout(() => control.resume(), 0)
+      }
+      return Promise.resolve(true)
+    })
+
+    const result = await measureRequests(
+      {
+        ...performancePresets.light,
+        endpoint: "ping",
+        samples: 3,
+        concurrency: 1,
+      },
+      request,
+      control,
+    )
+
+    expect(request).toHaveBeenCalledTimes(4)
+    expect(result.successful).toBe(3)
   })
 })

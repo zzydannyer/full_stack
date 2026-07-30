@@ -82,9 +82,7 @@ test("renders four service cards and eight database cards", async ({ page }) => 
   await expect(page.getByTestId("performance-result-elysia")).toBeVisible()
   await expect(page.getByTestId("performance-result-spring")).toBeVisible()
   await expect(page.getByTestId("performance-result-spring")).toContainText(/失败|Failed/i)
-  await expect(page.getByTestId("performance-chart-latency")).toBeVisible()
-  await expect(page.getByTestId("performance-chart-throughput")).toBeVisible()
-  await expect(page.getByTestId("performance-chart-success")).toBeVisible()
+  await expect(page.getByTestId("performance-chart")).toBeVisible()
   expect(maximumBenchmarkRequests).toBe(1)
 
   await page.getByLabel(/测试套件|Suite/i).click()

@@ -1,4 +1,5 @@
 import axios from "axios"
+import { isUndefined } from "lodash-es"
 
 export type PerformanceEndpoint =
   | "ping"
@@ -45,6 +46,15 @@ export interface PerformanceTarget {
   baseUrl: string
 }
 
+export interface PerformanceControl {
+  readonly signal: AbortSignal
+  readonly cancelled: boolean
+  pause: () => void
+  resume: () => void
+  cancel: () => void
+  waitIfPaused: () => Promise<void>
+}
+
 interface MeasureRecord {
   duration: number
   successful: boolean
@@ -80,6 +90,43 @@ export const performancePresets: Record<PerformancePreset, PerformanceOptions> =
     samples: 1000,
     concurrency: 32,
   },
+}
+
+export function createPerformanceControl(): PerformanceControl {
+  const abortController = new AbortController()
+  let paused = false
+  let resumeWaiters: Array<() => void> = []
+
+  function releaseWaiters() {
+    const waiters = resumeWaiters
+    resumeWaiters = []
+    for (const resolve of waiters) resolve()
+  }
+
+  return {
+    signal: abortController.signal,
+    get cancelled() {
+      return abortController.signal.aborted
+    },
+    pause() {
+      paused = true
+    },
+    resume() {
+      paused = false
+      releaseWaiters()
+    },
+    cancel() {
+      abortController.abort()
+      paused = false
+      releaseWaiters()
+    },
+    waitIfPaused() {
+      if (!paused) return Promise.resolve()
+      return new Promise<void>((resolve) => {
+        resumeWaiters.push(resolve)
+      })
+    },
+  }
 }
 
 export function createPerformanceTargets(
@@ -130,24 +177,32 @@ async function runWorker(
   workerCount: number,
   options: PerformanceOptions,
   request: MeasureRequest,
+  control: PerformanceControl,
 ) {
   const records: MeasureRecord[] = []
   for (let index = workerIndex; index < options.samples; index += workerCount) {
+    await control.waitIfPaused()
+    if (control.cancelled) return records
     const startedAt = performance.now()
     const successful = await request()
     records.push({
       duration: performance.now() - startedAt,
       successful,
     })
+    if (control.cancelled) return records
   }
   return records
 }
 
-function runSamples(options: PerformanceOptions, request: MeasureRequest) {
+function runSamples(
+  options: PerformanceOptions,
+  request: MeasureRequest,
+  control: PerformanceControl,
+) {
   const startedAt = performance.now()
   const workerCount = Math.min(options.concurrency, options.samples)
   const workers = Array.from({ length: workerCount }, (_, index) =>
-    runWorker(index, workerCount, options, request),
+    runWorker(index, workerCount, options, request, control),
   )
 
   return Promise.all(workers).then((workerRecords) => {
@@ -161,10 +216,24 @@ function runSamples(options: PerformanceOptions, request: MeasureRequest) {
   })
 }
 
-export function measureRequests(options: PerformanceOptions, request: MeasureRequest) {
+export function measureRequests(
+  options: PerformanceOptions,
+  request: MeasureRequest,
+  control: PerformanceControl = createPerformanceControl(),
+) {
   return request().then(
-    () => runSamples(options, request),
-    () => runSamples(options, request),
+    () => {
+      if (control.cancelled) {
+        return calculatePerformance([], 0, 0)
+      }
+      return runSamples(options, request, control)
+    },
+    () => {
+      if (control.cancelled) {
+        return calculatePerformance([], 0, 0)
+      }
+      return runSamples(options, request, control)
+    },
   )
 }
 
@@ -172,8 +241,9 @@ export function measureWriteRequests(
   options: PerformanceOptions,
   request: MeasureRequest,
   cleanup: MeasureRequest,
+  control: PerformanceControl = createPerformanceControl(),
 ) {
-  return measureRequests(options, request).then((result) =>
+  return measureRequests(options, request, control).then((result) =>
     cleanup().then(
       () => result,
       () => result,
@@ -185,10 +255,12 @@ function createRequest(
   target: PerformanceTarget,
   options: PerformanceOptions,
   runId: string,
+  control: PerformanceControl,
 ): MeasureRequest {
   const client = axios.create({
     baseURL: target.baseUrl,
     timeout: 30000,
+    signal: control.signal,
   })
 
   return () => {
@@ -241,21 +313,38 @@ function createRequest(
   }
 }
 
-function createCleanup(target: PerformanceTarget, runId: string): MeasureRequest {
+function createCleanup(
+  target: PerformanceTarget,
+  runId: string,
+  control: PerformanceControl,
+): MeasureRequest {
   const client = axios.create({
     baseURL: target.baseUrl,
     timeout: 30000,
   })
   return () =>
-    client.delete(`/benchmark/database/write/${runId}`, {
-      params: { database: target.database },
-    }).then(
-      () => true,
-      () => false,
-    )
+    client
+      .delete(`/benchmark/database/write/${runId}`, {
+        params: { database: target.database },
+        signal: control.cancelled ? undefined : control.signal,
+      })
+      .then(
+        () => true,
+        () => false,
+      )
 }
 
-export async function runPerformanceTests(options: PerformanceOptions) {
+export function createRunId() {
+  const bytes = new Uint8Array(16)
+  crypto.getRandomValues(bytes)
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("")
+}
+
+export async function runPerformanceTests(
+  options: PerformanceOptions,
+  control: PerformanceControl = createPerformanceControl(),
+  onResult?: (result: PerformanceResult) => void,
+) {
   const targets = createPerformanceTargets(options.endpoint, {
     nest: import.meta.env.VITE_BACKEND_NEST_URL,
     axum: import.meta.env.VITE_BACKEND_AXUM_URL,
@@ -265,26 +354,39 @@ export async function runPerformanceTests(options: PerformanceOptions) {
 
   const results: PerformanceResult[] = []
   for (const target of targets) {
+    await control.waitIfPaused()
+    if (control.cancelled) return results
     if (options.endpoint !== "databaseWrite") {
-      const result = await measureRequests(options, createRequest(target, options, ""))
-      results.push({
+      const result = await measureRequests(
+        options,
+        createRequest(target, options, "", control),
+        control,
+      )
+      if (control.cancelled) return results
+      const item = {
         backend: target.backend,
         database: target.database,
         ...result,
-      })
+      }
+      results.push(item)
+      if (!isUndefined(onResult)) onResult(item)
       continue
     }
-    const runId = crypto.randomUUID()
+    const runId = createRunId()
     const result = await measureWriteRequests(
       options,
-      createRequest(target, options, runId),
-      createCleanup(target, runId),
+      createRequest(target, options, runId, control),
+      createCleanup(target, runId, control),
+      control,
     )
-    results.push({
+    if (control.cancelled) return results
+    const item = {
       backend: target.backend,
       database: target.database,
       ...result,
-    })
+    }
+    results.push(item)
+    if (!isUndefined(onResult)) onResult(item)
   }
   return results
 }

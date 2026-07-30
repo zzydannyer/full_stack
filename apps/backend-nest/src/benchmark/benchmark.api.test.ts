@@ -12,24 +12,24 @@ describe("Nest benchmark api", () => {
   let app: INestApplication
   const createdAt = new Date("2026-07-30T00:00:00.000Z")
   const postgresqlClient = {
-    query: vi.fn(async () => ({ rows: [] })),
-    release: vi.fn(),
+    query: vi.fn<() => Promise<{ rows: object[] }>>(async () => ({ rows: [] })),
+    release: vi.fn<() => undefined>(),
   }
   const postgresqlPool = {
-    query: vi.fn(),
-    connect: vi.fn(async () => postgresqlClient),
-    end: vi.fn(async () => {}),
+    query: vi.fn<() => Promise<{ rows: object[] }>>(),
+    connect: vi.fn<() => Promise<typeof postgresqlClient>>(async () => postgresqlClient),
+    end: vi.fn<() => Promise<undefined>>(async () => undefined),
   }
   const mysqlConnection = {
-    beginTransaction: vi.fn(async () => {}),
-    execute: vi.fn(async () => [{}, []]),
-    commit: vi.fn(async () => {}),
-    release: vi.fn(),
+    beginTransaction: vi.fn<() => Promise<undefined>>(async () => undefined),
+    execute: vi.fn<() => Promise<[object, object[]]>>(async () => [{}, []]),
+    commit: vi.fn<() => Promise<undefined>>(async () => undefined),
+    release: vi.fn<() => undefined>(),
   }
   const mysqlPool = {
-    execute: vi.fn(),
-    getConnection: vi.fn(async () => mysqlConnection),
-    end: vi.fn(async () => {}),
+    execute: vi.fn<() => Promise<[object | object[], object[]]>>(),
+    getConnection: vi.fn<() => Promise<typeof mysqlConnection>>(async () => mysqlConnection),
+    end: vi.fn<() => Promise<undefined>>(async () => undefined),
   }
 
   beforeAll(async () => {

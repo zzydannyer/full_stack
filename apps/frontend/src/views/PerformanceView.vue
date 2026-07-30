@@ -1,8 +1,15 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue"
 import { useI18n } from "vue-i18n"
-import { toInteger } from "lodash-es"
+import { isArray, isNumber, isObject, isString, toInteger } from "lodash-es"
 import { toast } from "vue-sonner"
+import { use } from "echarts/core"
+import { BarChart } from "echarts/charts"
+import { GridComponent, LegendComponent, TooltipComponent } from "echarts/components"
+import { CanvasRenderer } from "echarts/renderers"
+import type { CallbackDataParams } from "echarts/types/dist/shared"
+import VChart from "vue-echarts"
+import "vue-echarts/style.css"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -15,37 +22,98 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import {
+  createPerformanceControl,
   performancePresets,
   runPerformanceTests,
   type PerformanceBackend,
+  type PerformanceControl,
   type PerformanceEndpoint,
   type PerformancePreset,
   type PerformanceResult,
 } from "@/lib/measure"
 
-const { t } = useI18n()
+use([CanvasRenderer, BarChart, GridComponent, TooltipComponent, LegendComponent])
+
+const { t, locale } = useI18n()
 const endpoint = ref<PerformanceEndpoint>("ping")
 const preset = ref<PerformancePreset>("extreme")
 const settings = ref({ ...performancePresets.extreme })
-const loading = ref(false)
+const runState = ref<"idle" | "running" | "paused">("idle")
+const control = ref<PerformanceControl>(createPerformanceControl())
+const runSession = ref(0)
 const results = ref<PerformanceResult[]>([])
-const latencyMetrics = [
-  { key: "avg", color: "bg-sky-500" },
-  { key: "p50", color: "bg-violet-500" },
-  { key: "p95", color: "bg-amber-500" },
+const comparisonMetrics = [
+  { key: "avg", invert: true },
+  { key: "p50", invert: true },
+  { key: "p95", invert: true },
+  { key: "throughput", invert: false },
+  { key: "successRate", invert: false },
 ] as const
-const backendBarClasses: Record<PerformanceBackend, string> = {
-  nest: "bg-rose-500",
-  axum: "bg-orange-500",
-  elysia: "bg-emerald-500",
-  spring: "bg-green-600",
+const backendColors: Record<PerformanceBackend, string> = {
+  nest: "#e11d48",
+  axum: "#f97316",
+  elysia: "#10b981",
+  spring: "#16a34a",
 }
-const maxLatency = computed(() =>
-  Math.max(...results.value.flatMap((result) => [result.avg, result.p50, result.p95])),
-)
-const maxThroughput = computed(() =>
-  Math.max(...results.value.map((result) => result.throughput)),
-)
+
+const chartOption = computed(() => {
+  locale.value
+  const categories = comparisonMetrics.map((metric) => t(`performance.${metric.key}`))
+  return {
+    tooltip: {
+      trigger: "axis",
+      axisPointer: { type: "shadow" },
+      formatter: formatChartTooltip,
+    },
+    legend: {
+      top: 0,
+      data: results.value.map((result) => resultLabel(result)),
+    },
+    grid: {
+      left: 16,
+      right: 16,
+      top: 56,
+      bottom: 8,
+      containLabel: true,
+    },
+    xAxis: {
+      type: "category",
+      data: categories,
+      axisLabel: {
+        interval: 0,
+      },
+    },
+    yAxis: {
+      type: "value",
+      name: t("performance.normalizedAxis"),
+      max: 100,
+      splitLine: { lineStyle: { type: "dashed" } },
+    },
+    series: results.value.map((result) => ({
+      name: resultLabel(result),
+      type: "bar",
+      barMaxWidth: 36,
+      itemStyle: {
+        color: backendColors[result.backend],
+        opacity: result.database === "mysql" ? 0.65 : 1,
+      },
+      data: comparisonMetrics.map((metric) => {
+        const values = results.value.map((item) => item[metric.key])
+        const peak = Math.max(...values, 1)
+        const floor = Math.min(...values, peak)
+        const value = result[metric.key]
+        return {
+          value: metric.invert
+            ? (floor / Math.max(value, floor)) * 100
+            : (value / peak) * 100,
+          raw: value,
+          metricKey: metric.key,
+        }
+      }),
+    })),
+  }
+})
+
 const validationMessages = computed(() => {
   const messages: string[] = []
   if (endpoint.value === "json" && (settings.value.size < 1 || settings.value.size > 50000)) {
@@ -93,26 +161,73 @@ function resultLabel(result: PerformanceResult) {
   return `${backend} · ${t(`performance.database.${result.database}`)}`
 }
 
-function barWidth(value: number, maximum: number) {
-  return `${(value / maximum) * 100}%`
-}
-
 function rangeLabel(label: string, minimum: number, maximum: number) {
   return t("performance.labelWithRange", { label, minimum, maximum })
 }
 
+function formatMetricRaw(metricKey: string, raw: number) {
+  if (metricKey === "throughput") {
+    return `${raw.toFixed(2)} ${t("performance.perSecond")}`
+  }
+  if (metricKey === "successRate") return `${raw.toFixed(1)}%`
+  return `${raw.toFixed(2)} ms`
+}
+
+function formatChartTooltip(params: CallbackDataParams | CallbackDataParams[]) {
+  if (!isArray(params)) return ""
+  const title = params[0]?.axisValueLabel ?? ""
+  const lines = params.map((item) => {
+    const data = item.data
+    if (!isObject(data) || !("raw" in data) || !("metricKey" in data)) return ""
+    if (!isNumber(data.raw) || !isString(data.metricKey)) return ""
+    return `${item.marker}${item.seriesName}: ${formatMetricRaw(data.metricKey, data.raw)}`
+  })
+  return [title, ...lines.filter((line) => line.length > 0)].join("<br/>")
+}
+
 async function runTests() {
+  if (runState.value !== "idle") return
   if (validationMessages.value.length > 0) {
     toast.error(validationMessages.value.join(" / "))
     return
   }
-  loading.value = true
+  const nextControl = createPerformanceControl()
+  const session = runSession.value + 1
+  control.value = nextControl
+  runSession.value = session
+  runState.value = "running"
   results.value = []
-  results.value = await runPerformanceTests({
-    ...settings.value,
-    endpoint: endpoint.value,
-  })
-  loading.value = false
+  await runPerformanceTests(
+    {
+      ...settings.value,
+      endpoint: endpoint.value,
+    },
+    nextControl,
+    (result) => {
+      if (runSession.value !== session) return
+      results.value = [...results.value, result]
+    },
+  ).then(
+    () => undefined,
+    () => undefined,
+  )
+  if (runSession.value === session) runState.value = "idle"
+}
+
+function pauseTests() {
+  control.value.pause()
+  runState.value = "paused"
+}
+
+function resumeTests() {
+  control.value.resume()
+  runState.value = "running"
+}
+
+function cancelTests() {
+  runSession.value += 1
+  control.value.cancel()
+  runState.value = "idle"
 }
 </script>
 
@@ -236,9 +351,38 @@ async function runTests() {
               @update:model-value="settings.concurrency = toInteger($event)"
             />
           </div>
-          <Button type="submit" :disabled="loading">
-            {{ loading ? t("performance.running") : t("performance.run") }}
-          </Button>
+          <div class="flex flex-wrap items-center gap-2">
+            <Button type="submit" class="h-9" :disabled="runState !== 'idle'">
+              {{ runState === "idle" ? t("performance.run") : t("performance.running") }}
+            </Button>
+            <Button
+              v-if="runState === 'running'"
+              type="button"
+              class="h-9"
+              variant="secondary"
+              @click="pauseTests"
+            >
+              {{ t("performance.pause") }}
+            </Button>
+            <Button
+              v-if="runState === 'paused'"
+              type="button"
+              class="h-9"
+              variant="secondary"
+              @click="resumeTests"
+            >
+              {{ t("performance.resume") }}
+            </Button>
+            <Button
+              v-if="runState !== 'idle'"
+              type="button"
+              class="h-9"
+              variant="outline"
+              @click="cancelTests"
+            >
+              {{ t("performance.cancel") }}
+            </Button>
+          </div>
         </form>
       </CardContent>
     </Card>
@@ -289,77 +433,16 @@ async function runTests() {
       </Card>
     </div>
 
-    <div v-if="results.length > 0" class="grid gap-4 xl:grid-cols-3">
-      <Card data-testid="performance-chart-latency">
-        <CardHeader>
-          <CardTitle>{{ t("performance.latencyChart") }}</CardTitle>
-          <CardDescription>{{ t("performance.latencyHint") }}</CardDescription>
-        </CardHeader>
-        <CardContent class="space-y-5">
-          <div v-for="result in results" :key="`latency-${resultKey(result)}`" class="space-y-2">
-            <p class="truncate text-sm font-medium">{{ resultLabel(result) }}</p>
-            <div v-for="metric in latencyMetrics" :key="metric.key" class="grid gap-1">
-              <div class="flex items-center justify-between gap-3 text-xs">
-                <span class="text-muted-foreground">{{ t(`performance.${metric.key}`) }}</span>
-                <span class="font-medium">{{ result[metric.key].toFixed(2) }} ms</span>
-              </div>
-              <div class="bg-muted h-2 overflow-hidden rounded-full">
-                <div
-                  class="h-full rounded-full transition-[width]"
-                  :class="metric.color"
-                  :style="{ width: barWidth(result[metric.key], maxLatency) }"
-                />
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card data-testid="performance-chart-throughput">
-        <CardHeader>
-          <CardTitle>{{ t("performance.throughputChart") }}</CardTitle>
-          <CardDescription>{{ t("performance.throughputHint") }}</CardDescription>
-        </CardHeader>
-        <CardContent class="space-y-5">
-          <div v-for="result in results" :key="`throughput-${resultKey(result)}`" class="space-y-2">
-            <div class="flex items-center justify-between gap-3 text-sm">
-              <span class="truncate font-medium">{{ resultLabel(result) }}</span>
-              <span class="shrink-0">
-                {{ result.throughput.toFixed(2) }} {{ t("performance.perSecond") }}
-              </span>
-            </div>
-            <div class="bg-muted h-3 overflow-hidden rounded-full">
-              <div
-                class="h-full rounded-full transition-[width]"
-                :class="backendBarClasses[result.backend]"
-                :style="{ width: barWidth(result.throughput, maxThroughput) }"
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card data-testid="performance-chart-success">
-        <CardHeader>
-          <CardTitle>{{ t("performance.successChart") }}</CardTitle>
-          <CardDescription>{{ t("performance.successHint") }}</CardDescription>
-        </CardHeader>
-        <CardContent class="space-y-5">
-          <div v-for="result in results" :key="`success-${resultKey(result)}`" class="space-y-2">
-            <div class="flex items-center justify-between gap-3 text-sm">
-              <span class="truncate font-medium">{{ resultLabel(result) }}</span>
-              <span class="shrink-0">{{ result.successRate.toFixed(1) }}%</span>
-            </div>
-            <div class="bg-muted h-3 overflow-hidden rounded-full">
-              <div
-                class="h-full rounded-full transition-[width]"
-                :class="backendBarClasses[result.backend]"
-                :style="{ width: `${result.successRate}%` }"
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+    <Card v-if="results.length > 0" data-testid="performance-chart">
+      <CardHeader>
+        <CardTitle>{{ t("performance.comparisonChart") }}</CardTitle>
+        <CardDescription>{{ t("performance.comparisonHint") }}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div class="h-[420px] w-full">
+          <VChart class="h-full w-full" :option="chartOption" :autoresize="true" />
+        </div>
+      </CardContent>
+    </Card>
   </section>
 </template>
