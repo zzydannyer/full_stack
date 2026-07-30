@@ -1,16 +1,9 @@
-use chrono::{NaiveDateTime, SecondsFormat};
-use sqlx::{
-    Executor, Row, SqlStr, Statement,
-    mysql::MySqlRow,
-    postgres::PgRow,
-};
+use chrono::{DateTime, NaiveDateTime, SecondsFormat, Utc};
+use sqlx::{Executor, Row, SqlStr, Statement, mysql::MySqlRow, postgres::PgRow};
 
 use crate::database::DatabaseState;
 
-use super::{
-    dto::Database,
-    vo::BenchmarkRecord,
-};
+use super::{dto::Database, vo::BenchmarkRecord};
 
 pub(super) async fn read(
     state: &DatabaseState,
@@ -149,14 +142,12 @@ fn postgresql_record(row: PgRow) -> Result<BenchmarkRecord, sqlx::Error> {
 }
 
 fn mysql_record(row: MySqlRow) -> Result<BenchmarkRecord, sqlx::Error> {
-    let created_at = row.try_get::<NaiveDateTime, _>("created_at")?;
+    let created_at = row.try_get::<DateTime<Utc>, _>("created_at")?;
     Ok(BenchmarkRecord {
         id: row.try_get("id")?,
         run_id: row.try_get("run_id")?,
         payload: row.try_get("payload")?,
         score: row.try_get("score")?,
-        created_at: created_at
-            .and_utc()
-            .to_rfc3339_opts(SecondsFormat::Millis, true),
+        created_at: created_at.to_rfc3339_opts(SecondsFormat::Millis, true),
     })
 }
