@@ -48,7 +48,7 @@ export class BenchmarkRepository {
       return this.readResult(database, result.rows)
     }
 
-    const [rows] = await this.mysqlPool.execute<MysqlBenchmarkRow[]>(
+    const [rows] = await this.mysqlPool.query<MysqlBenchmarkRow[]>(
       `SELECT CAST(id AS SIGNED) AS id, run_id, payload, score, created_at
        FROM benchmark_record
        WHERE run_id = 'seed'

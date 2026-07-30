@@ -42,7 +42,7 @@ pub(super) async fn read(
             LIMIT ?
             "#,
         )
-        .bind(limit)
+        .bind(i64::from(limit))
         .fetch_all(&state.mysql)
         .await?
         .into_iter()

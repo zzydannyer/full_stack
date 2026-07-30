@@ -27,6 +27,7 @@ describe("Nest benchmark api", () => {
     release: vi.fn<() => undefined>(),
   }
   const mysqlPool = {
+    query: vi.fn<() => Promise<[object | object[], object[]]>>(),
     execute: vi.fn<() => Promise<[object | object[], object[]]>>(),
     getConnection: vi.fn<() => Promise<typeof mysqlConnection>>(async () => mysqlConnection),
     end: vi.fn<() => Promise<undefined>>(async () => undefined),
@@ -58,6 +59,7 @@ describe("Nest benchmark api", () => {
     mysqlConnection.execute.mockClear()
     mysqlConnection.commit.mockClear()
     mysqlConnection.release.mockClear()
+    mysqlPool.query.mockReset()
     mysqlPool.execute.mockReset()
     mysqlPool.getConnection.mockClear()
   })
@@ -161,7 +163,7 @@ describe("Nest benchmark api", () => {
   })
 
   it("reads MySQL records at the maximum limit", async () => {
-    mysqlPool.execute.mockResolvedValue([
+    mysqlPool.query.mockResolvedValue([
       [
         {
           id: 2,
@@ -180,7 +182,7 @@ describe("Nest benchmark api", () => {
     expect(response.status).toBe(200)
     expect(response.body.data.database).toBe("mysql")
     expect(response.body.data.count).toBe(1)
-    expect(mysqlPool.execute).toHaveBeenCalledWith(expect.stringContaining("SELECT"), [10000])
+    expect(mysqlPool.query).toHaveBeenCalledWith(expect.stringContaining("SELECT"), [10000])
   })
 
   it.each([

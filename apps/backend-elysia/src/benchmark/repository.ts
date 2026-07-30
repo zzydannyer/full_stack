@@ -1,8 +1,9 @@
+import { isString } from "lodash-es"
 import { selectDatabase } from "../database/clients"
 import type { DatabaseName } from "./dto"
 
 type BenchmarkRow = {
-  id: number
+  id: number | string
   run_id: string
   payload: string
   score: number
@@ -23,7 +24,7 @@ export async function readBenchmark(databaseName: DatabaseName, limit: number) {
     LIMIT ${limit}
   `
   const items = rows.map((row) => ({
-    id: row.id,
+    id: isString(row.id) ? parseInt(row.id, 10) : row.id,
     runId: row.run_id,
     payload: row.payload,
     score: row.score,
