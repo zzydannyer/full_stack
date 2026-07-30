@@ -4,3 +4,4 @@ pnpm lint
 pnpm format
 pnpm test:unit
 pnpm build
+pnpm --filter @full-stack/frontend test:e2e
