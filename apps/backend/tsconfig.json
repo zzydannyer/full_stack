@@ -9,7 +9,7 @@
     "experimentalDecorators": true,
     "strictPropertyInitialization": false,
     "allowSyntheticDefaultImports": true,
-    "types": ["node"]
+    "types": ["node", "multer"]
   },
   "include": ["src"],
   "references": [{ "path": "../../packages/shared" }]

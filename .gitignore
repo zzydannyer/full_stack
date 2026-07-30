@@ -3,10 +3,13 @@ dist
 .turbo
 .DS_Store
 *.log
+*.tsbuildinfo
 .env
 .env.local
 .env.*.local
 coverage
+test-results
+playwright-report
 .idea
 .vscode/*
 !.vscode/extensions.json

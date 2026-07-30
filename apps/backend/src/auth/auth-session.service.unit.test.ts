@@ -2,7 +2,7 @@ import "dotenv/config"
 import { beforeEach, describe, expect, it } from "vitest"
 import { UnauthorizedException } from "@nestjs/common"
 import { isString, isUndefined } from "lodash-es"
-import type Redis from "ioredis"
+import { Redis } from "ioredis"
 import { AuthSessionService } from "./auth-session.service.js"
 
 function createRedisMock() {

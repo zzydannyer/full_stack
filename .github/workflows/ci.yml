@@ -56,7 +56,6 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install
-      - run: pnpm build:shared
       - run: pnpm lint
       - run: pnpm format
       - run: pnpm db:deploy
@@ -64,6 +63,7 @@ jobs:
       - run: pnpm test:unit
       - run: pnpm test:api
       - run: pnpm test:e2e
+      - run: pnpm build:shared
       - run: pnpm --filter @full-stack/backend build
       - run: pnpm --filter @full-stack/frontend build
       - run: pnpm --filter @full-stack/frontend exec playwright install --with-deps chromium

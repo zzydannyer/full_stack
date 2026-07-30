@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from "node:crypto"
 import { Inject, Injectable, UnauthorizedException } from "@nestjs/common"
-import type Redis from "ioredis"
+import { Redis } from "ioredis"
 import { isObject, isString } from "lodash-es"
 import { env } from "../config/env.js"
 import { REDIS_CLIENT } from "../redis/redis.constants.js"

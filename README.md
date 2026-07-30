@@ -28,9 +28,9 @@ full_stack/
 
 ```bash
 pnpm install
-pnpm build:shared
 pnpm db:deploy
 pnpm db:seed
+pnpm build:shared
 pnpm dev
 ```
 
