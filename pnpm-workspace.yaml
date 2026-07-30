@@ -13,3 +13,4 @@ allowBuilds:
   esbuild: true
   "@scarf/scarf": false
   vue-demi: true
+  better-sqlite3: false
