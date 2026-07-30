@@ -1,0 +1,50 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  user
+  admin
+}
+
+model User {
+  id           String     @id @default(cuid())
+  username     String     @unique
+  email        String     @unique
+  name         String
+  passwordHash String
+  role         Role       @default(user)
+  disabled     Boolean    @default(false)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  auditLogs    AuditLog[]
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  detail    String   @default("")
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([action])
+}
+
+model BenchmarkRecord {
+  id        BigInt   @id @default(autoincrement())
+  runId     String   @db.VarChar(100) @map("run_id")
+  payload   String   @db.VarChar(255)
+  score     Int
+  createdAt DateTime @default(now()) @db.Timestamp(3) @map("created_at")
+
+  @@index([runId])
+  @@map("benchmark_record")
+}

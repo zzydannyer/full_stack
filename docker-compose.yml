@@ -7,12 +7,27 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
       timeout: 5s
       retries: 5
+
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: mysql
+      MYSQL_DATABASE: full_stack_benchmark
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-pmysql"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   redis:
     image: redis:7
@@ -24,13 +39,15 @@ services:
       timeout: 5s
       retries: 5
 
-  api:
+  backend-nest:
     build:
       context: .
-      dockerfile: apps/backend/Dockerfile
+      dockerfile: apps/backend-nest/Dockerfile
     environment:
       NODE_ENV: production
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/full_stack
+      POSTGRESQL_URL: postgresql://postgres:postgres@postgres:5432/full_stack
+      MYSQL_URL: mysql://root:mysql@mysql:3306/full_stack_benchmark
       PORT: "3000"
       FRONTEND_ORIGIN: http://localhost:8080
       JWT_SECRET: ${JWT_SECRET:-change-me-in-production-please}
@@ -50,7 +67,60 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      mysql:
+        condition: service_healthy
       redis:
+        condition: service_healthy
+
+  backend-axum:
+    build:
+      context: apps/backend-axum
+      dockerfile: Dockerfile
+    environment:
+      POSTGRESQL_URL: postgresql://postgres:postgres@postgres:5432/full_stack
+      MYSQL_URL: mysql://root:mysql@mysql:3306/full_stack_benchmark
+      PORT: "3001"
+      FRONTEND_ORIGIN: http://localhost:8080
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+
+  backend-elysia:
+    build:
+      context: .
+      dockerfile: apps/backend-elysia/Dockerfile
+    environment:
+      POSTGRESQL_URL: postgresql://postgres:postgres@postgres:5432/full_stack
+      MYSQL_URL: mysql://root:mysql@mysql:3306/full_stack_benchmark
+      PORT: "3002"
+      FRONTEND_ORIGIN: http://localhost:8080
+    ports:
+      - "3002:3002"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+
+  backend-spring:
+    build:
+      context: apps/backend-spring
+      dockerfile: Dockerfile
+    environment:
+      POSTGRESQL_URL: postgresql://postgres:postgres@postgres:5432/full_stack
+      MYSQL_URL: mysql://root:mysql@mysql:3306/full_stack_benchmark
+      PORT: "3003"
+      FRONTEND_ORIGIN: http://localhost:8080
+    ports:
+      - "3003:3003"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mysql:
         condition: service_healthy
 
   web:
@@ -59,10 +129,18 @@ services:
       dockerfile: apps/frontend/Dockerfile
       args:
         VITE_API_BASE_URL: /api
+        VITE_BACKEND_NEST_URL: /api
+        VITE_BACKEND_AXUM_URL: /backend-axum
+        VITE_BACKEND_ELYSIA_URL: /backend-elysia
+        VITE_BACKEND_SPRING_URL: /backend-spring
     ports:
       - "8080:80"
     depends_on:
-      - api
+      - backend-nest
+      - backend-axum
+      - backend-elysia
+      - backend-spring
 
 volumes:
   postgres_data:
+  mysql_data:

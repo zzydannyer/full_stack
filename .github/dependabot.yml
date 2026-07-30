@@ -10,3 +10,13 @@ updates:
     directory: "/"
     schedule:
       interval: weekly
+
+  - package-ecosystem: cargo
+    directory: "/apps/backend-axum"
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: maven
+    directory: "/apps/backend-spring"
+    schedule:
+      interval: weekly

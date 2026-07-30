@@ -14,8 +14,10 @@ playwright-report
 .vscode/*
 !.vscode/extensions.json
 !.vscode/launch.json
-apps/backend/prisma/*.db
-apps/backend/prisma/*.db-journal
-apps/backend/src/generated
+apps/backend-nest/prisma/*.db
+apps/backend-nest/prisma/*.db-journal
+apps/backend-nest/src/generated
 apps/frontend/dist
 packages/shared/dist
+apps/backend-axum/target
+apps/backend-spring/target

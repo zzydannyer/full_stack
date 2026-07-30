@@ -2,16 +2,16 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Backend",
+      "name": "Backend Nest",
       "type": "node",
       "request": "launch",
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["exec", "nest", "start", "--debug=9229", "--watch"],
-      "cwd": "${workspaceFolder}/apps/backend",
+      "cwd": "${workspaceFolder}/apps/backend-nest",
       "console": "integratedTerminal",
       "restart": true,
       "autoAttachChildProcesses": true,
-      "envFile": "${workspaceFolder}/apps/backend/.env",
+      "envFile": "${workspaceFolder}/apps/backend-nest/.env",
       "skipFiles": ["<node_internals>/**", "**/node_modules/**"]
     },
     {
@@ -37,7 +37,7 @@
       "webRoot": "${workspaceFolder}/apps/frontend"
     },
     {
-      "name": "Backend Attach",
+      "name": "Backend Nest Attach",
       "type": "node",
       "request": "attach",
       "port": 9229,
@@ -48,7 +48,7 @@
   "compounds": [
     {
       "name": "Full Stack",
-      "configurations": ["Backend", "Frontend"],
+      "configurations": ["Backend Nest", "Frontend"],
       "stopAll": true
     }
   ]

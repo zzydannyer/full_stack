@@ -7,6 +7,7 @@ import { roles, type Role } from "@full-stack/shared"
 import {
   ChevronsUpDown,
   GalleryVerticalEnd,
+  Gauge,
   Home,
   LogOut,
   Moon,
@@ -65,6 +66,7 @@ const menuItems = computed(() => {
   const items = [
     { title: t("nav.home"), to: "/", icon: Home, roles: allRoles },
     { title: t("nav.users"), to: "/users", icon: Users, roles: adminRoles },
+    { title: t("nav.performance"), to: "/performance", icon: Gauge, roles: adminRoles },
     { title: t("nav.settings"), to: "/settings", icon: Settings, roles: allRoles },
   ]
   const current = authStore.user

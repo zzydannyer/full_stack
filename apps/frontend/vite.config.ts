@@ -20,6 +20,21 @@ export default defineConfig({
         target: "http://localhost:3000",
         changeOrigin: true,
       },
+      "/backend-axum": {
+        target: "http://localhost:3001",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/backend-axum/, "/api"),
+      },
+      "/backend-elysia": {
+        target: "http://localhost:3002",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/backend-elysia/, "/api"),
+      },
+      "/backend-spring": {
+        target: "http://localhost:3003",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/backend-spring/, "/api"),
+      },
     },
   },
 })

@@ -48,5 +48,27 @@ export type { PageQuery, PageResult } from "./pagination.js"
 export { healthSchema } from "./health.js"
 export type { Health } from "./health.js"
 
+export {
+  performanceCleanupVO,
+  performanceComputeVO,
+  performanceDatabaseDTO,
+  performanceJsonItemVO,
+  performanceJsonVO,
+  performancePingVO,
+  performanceReadVO,
+  performanceRecordVO,
+  performanceWriteVO,
+} from "./performance.js"
+export type {
+  PerformanceCleanupVO,
+  PerformanceComputeVO,
+  PerformanceDatabaseDTO,
+  PerformanceJsonVO,
+  PerformancePingVO,
+  PerformanceReadVO,
+  PerformanceRecordVO,
+  PerformanceWriteVO,
+} from "./performance.js"
+
 export { uploadResultSchema } from "./upload.js"
 export type { UploadResult } from "./upload.js"

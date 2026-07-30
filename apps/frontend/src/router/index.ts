@@ -6,6 +6,7 @@ import { useAuthStore } from "@/stores/auth"
 import ForgotPasswordView from "@/views/ForgotPasswordView.vue"
 import HomeView from "@/views/HomeView.vue"
 import LoginView from "@/views/LoginView.vue"
+import PerformanceView from "@/views/PerformanceView.vue"
 import RegisterView from "@/views/RegisterView.vue"
 import ResetPasswordView from "@/views/ResetPasswordView.vue"
 import SettingsView from "@/views/SettingsView.vue"
@@ -48,6 +49,12 @@ export const router = createRouter({
           path: "users",
           name: "users",
           component: UsersView,
+          meta: { roles: ["admin"] },
+        },
+        {
+          path: "performance",
+          name: "performance",
+          component: PerformanceView,
           meta: { roles: ["admin"] },
         },
         { path: "settings", name: "settings", component: SettingsView },

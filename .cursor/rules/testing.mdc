@@ -28,5 +28,5 @@ alwaysApply: true
 
 ## 放置
 
-- backend 共用启动：`apps/backend/test/create-test-app.ts`
+- backend-nest 共用启动：`apps/backend-nest/test/create-test-app.ts`
 - 测试文件靠近被测源码，或放在同模块目录

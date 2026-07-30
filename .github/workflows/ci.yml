@@ -21,6 +21,18 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: mysql
+          MYSQL_DATABASE: full_stack_benchmark
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h localhost -pmysql"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
       redis:
         image: redis:7
         ports:
@@ -33,6 +45,8 @@ jobs:
     env:
       NODE_ENV: test
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/full_stack
+      POSTGRESQL_URL: postgresql://postgres:postgres@localhost:5432/full_stack
+      MYSQL_URL: mysql://root:mysql@127.0.0.1:3306/full_stack_benchmark
       PORT: "3000"
       FRONTEND_ORIGIN: http://localhost:5173
       JWT_SECRET: ci-jwt-secret-key
@@ -48,6 +62,10 @@ jobs:
       SMTP_FROM: ""
       UPLOAD_DIR: uploads
       VITE_API_BASE_URL: /api
+      VITE_BACKEND_NEST_URL: /api
+      VITE_BACKEND_AXUM_URL: /backend-axum
+      VITE_BACKEND_ELYSIA_URL: /backend-elysia
+      VITE_BACKEND_SPRING_URL: /backend-spring
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -55,16 +73,46 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+      - uses: oven-sh/setup-bun@v2
+      - uses: dtolnay/rust-toolchain@1.94.0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
       - run: pnpm install
       - run: pnpm lint
       - run: pnpm format
       - run: pnpm db:deploy
       - run: pnpm db:seed
+      - run: cargo build --locked --release --manifest-path apps/backend-axum/Cargo.toml
+      - run: pnpm --filter @full-stack/backend-elysia build
+      - run: mvn --batch-mode --file apps/backend-spring/pom.xml package -DskipTests
+      - name: Start benchmark runtimes
+        run: |
+          PORT=3001 nohup ./apps/backend-axum/target/release/backend-axum > /tmp/backend-axum.log 2>&1 &
+          PORT=3002 nohup pnpm --filter @full-stack/backend-elysia start > /tmp/backend-elysia.log 2>&1 &
+          PORT=3003 nohup java -jar apps/backend-spring/target/backend-spring-0.0.1-SNAPSHOT.jar > /tmp/backend-spring.log 2>&1 &
+          for url in \
+            http://127.0.0.1:3001/api/benchmark/ping \
+            http://127.0.0.1:3002/api/benchmark/ping \
+            http://127.0.0.1:3003/api/benchmark/ping
+          do
+            for attempt in {1..60}
+            do
+              if curl --fail --silent "$url" > /dev/null
+              then
+                break
+              fi
+              sleep 1
+            done
+            curl --fail --silent "$url" > /dev/null
+          done
       - run: pnpm test:unit
       - run: pnpm test:api
       - run: pnpm test:e2e
       - run: pnpm build:shared
-      - run: pnpm --filter @full-stack/backend build
+      - run: pnpm --filter @full-stack/backend-nest build
       - run: pnpm --filter @full-stack/frontend build
       - run: pnpm --filter @full-stack/frontend exec playwright install --with-deps chromium
       - run: pnpm --filter @full-stack/frontend test:e2e
